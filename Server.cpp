@@ -240,7 +240,6 @@ void Server::pollMainWork( void ) {
                 this->recieverequest( i );
             }
         } else if ( pfds[i].revents & POLLOUT ) {
-
             // send the response to the client
             this->sendresponse( i );
         }
@@ -249,7 +248,9 @@ void Server::pollMainWork( void ) {
 
 // ---------------------------- test ---------------------------- //
 std::string Server::response( std::string path ) {
-
+    std::ifstream file;
+    std::string buffer;
+    std::string tmp;
     std::string statusLine;
     if (access(path.c_str(), F_OK) == -1 && path != "") {
         statusLine = "HTTP/1.1 404 Not Found";
@@ -257,7 +258,6 @@ std::string Server::response( std::string path ) {
     else {
         if (path == "")
             path = "index.html";
-    std::cout << "path:" << path << std::endl;
         
         file.open( path, std::ios::in );
         if ( !file.is_open() ) {
@@ -272,14 +272,15 @@ std::string Server::response( std::string path ) {
         statusLine = "HTTP/1.1 200 OK";
     }
     std::string type = path.substr(path.rfind('.') + 1);
-    std::cout << "type:" << type << std::endl;
     std::string mimeType = getMimeType(type);
-    //test
-    std::cout << "mimetype: " << mimeType << std::endl;
-    //test
     message = statusLine + "\r\nContent-Type: " + mimeType + "\r\nContent-Length: ";
     message.append( std::to_string( tmp.size() ) ).append( "\r\n\r\n" ).append( tmp );
+    //////---------display request info---------///////
+    std::cout << "path: " << path << std::endl;
+    std::cout << "type: " << type << std::endl;
+    std::cout << "mimetype: " << mimeType << std::endl;
     std::cout << "message length: " << message.length() << std::endl;
+    // std::cout << "message : " << message << std::endl;
 
     return message;
 }

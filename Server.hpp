@@ -19,7 +19,7 @@
 
 #define PORT "9034"
 #define BACKLOG 128
-#define SEND 15728640
+#define SEND 1024
 #define SIZE 1024
 
 typedef struct clients_s {
@@ -47,15 +47,8 @@ class Server {
         // clients
         std::vector<clients_t> clients;
 
-
-        // test
-        std::ifstream file;
-        std::string buffer;
+        // response
         std::string message;
-        std::string tmp;
-        std::string method;
-        std::string path;
-        std::string mimetypes;
 
         // some fuction that we don't need to use outside the class
         int createsocket( void );
