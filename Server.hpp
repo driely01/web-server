@@ -1,9 +1,14 @@
 #pragma once
 
 #include <iostream>
-#include <unistd.h>
 #include <string>
+#include <algorithm>
+#include <fstream>
+#include <vector>
 #include <cstring>
+#include <map>
+
+#include <unistd.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <netinet/in.h>
@@ -11,14 +16,11 @@
 #include <arpa/inet.h>
 #include <poll.h>
 #include <sys/fcntl.h>
-#include <vector>
 #include <errno.h>
-#include <algorithm>
-#include <fstream>
 
 #define PORT "9034"
 #define BACKLOG 128
-#define SEND 15728640
+#define SEND 1024
 #define SIZE 1024
 
 typedef struct clients_s {
@@ -44,10 +46,9 @@ class Server {
         std::vector<struct pollfd> pfds;
 
         // clients
-        std::vector<clients_t> clients;
+        std::map<int, clients_t> clients;
 
-
-        // test
+        // ---------------------------- test ---------------------------- //
         std::ifstream file;
         std::string buffer;
         std::string message;
@@ -80,8 +81,8 @@ class Server {
 
         // clients functions
         void addClient( int const &sockfd );
-        void removeclient( std::vector<clients_t>::iterator const &it );
-        std::vector<clients_t>::iterator findActiveClient( int const &i );
+        // void removeclient( std::vector<clients_t>::iterator const &it );
+        // std::vector<clients_t>::iterator findActiveClient( int const &i );
 
         // ---------------------------- test ---------------------------- //
         std::string response( void );

@@ -23,11 +23,11 @@ void *Server::getinaddr( struct sockaddr *sa ) {
 void Server::getInfoAddr( void ) {
 
     std::memset( &hints, 0, sizeof( hints ) );
-    hints.ai_family = AF_UNSPEC;
+    hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    hints.ai_flags = AI_PASSIVE;
+    // hints.ai_flags = AI_PASSIVE;
 
-    this->status = getaddrinfo( NULL, PORT, &hints, &ai );
+    this->status = getaddrinfo( "10.11.6.6", PORT, &hints, &ai );
     if ( this->status != 0 ) {
 
         std::cout << "error: getaddrinfo: " << gai_strerror( status ) << std::endl;
@@ -79,7 +79,6 @@ void Server::socketlistener( void ) {
             continue;
         }
         std::cout << "-----> bind" << std::endl;
-
         break;
     }
     freeaddrinfo( ai );
@@ -158,7 +157,7 @@ int Server::acceptConnections( void ) {
 void Server::addClient( int const &sockfd ) {
 
     clients_t client;
-    std::vector<clients_t>::iterator it;
+    std::map<int, clients_t>::iterator it;
 
     client.sockfd = sockfd;
     client.content = 0;
@@ -166,41 +165,16 @@ void Server::addClient( int const &sockfd ) {
     if ( clients.size() == 0 ) {
 
         std::cout << "add the first client" << std::endl;
-        clients.push_back( client );
+        clients[sockfd] = client;
     } else {
 
-
-        it = clients.begin();
-        for ( ; it != clients.end(); ++it )
-            if ( it->sockfd == sockfd )
-                break;
+        it = clients.find( sockfd );
         if ( it == clients.end() ) {
 
             std::cout << "add more client" << std::endl;
-            clients.push_back( client );
+            clients[sockfd] = client;
         }
     }
-
-}
-
-std::vector<clients_t>::iterator Server::findActiveClient( int const &i ) {
-
-    std::vector<clients_t>::iterator itclients;
-    if ( clients.size() > 0 ) {
-
-        itclients = clients.begin();
-        for ( ; itclients != clients.end(); ++itclients ) {
-
-            if ( itclients->sockfd == pfds[i].fd )
-                break;
-        }
-    }
-    return itclients;
-}
-
-void Server::removeclient( std::vector<clients_t>::iterator const &it ) {
-
-    clients.erase( it );
 }
 
 void Server::printConeectedaddr( int const &sockfd ) {
@@ -250,7 +224,7 @@ void Server::pollMainWork( void ) {
 // ---------------------------- test ---------------------------- //
 std::string Server::response( void ) {
 
-    file.open( "dizzy.mp4", std::ios::in );
+    file.open( "min.mp4", std::ios::in );
     if ( !file ) {
 
         std::cout << "failed to open file" << std::endl;
@@ -270,26 +244,28 @@ std::string Server::response( void ) {
 
 void Server::recieverequest( int const &i ) {
 
-    std::vector<clients_t>::iterator itclients;
-    itclients = this->findActiveClient( i );
+    std::map<int, clients_t>::iterator itclients;
+    itclients = clients.find( pfds[i].fd );
     if ( itclients != clients.end() ) {
 
         char recievebuff[SIZE];
         int sender = pfds[i].fd;
         int recieved = recv( pfds[i].fd, recievebuff, SIZE, 0 );
+        recievebuff[recieved] = 0;
         if ( recieved <= 0 ) {
 
             if ( recieved == 0 )
                 std::cout << "*-*> pollserver: socket " << sender << " hung up" << std::endl;
             else
                 perror( "recv" );
-            this->removeclient( itclients );
+
+            clients.erase( itclients );
             this->removepollsock( i );
         }  else {
 
             std::cout << recievebuff << std::endl;
             pfds[i].events = POLLOUT;
-            std::cout << pfds[i].fd << " " << itclients->sockfd << " " << "----> pullout" << std::endl;
+            std::cout << pfds[i].fd << " " << itclients->first << " " << "----> pullout" << std::endl;
         }
     }
 }
@@ -301,37 +277,37 @@ void Server::sendresponse( int const &i ) {
     int deff;
     ssize_t sended;
     std::vector<struct pollfd>::iterator itpfds;
-    std::vector<clients_t>::iterator itclients;
+    std::map<int, clients_t>::iterator itclients;
 
     if ( pfds[i].fd != listener ) {
 
-        itclients = this->findActiveClient( i );
+        itclients = clients.find( pfds[i].fd );
         if ( itclients != clients.end() ) {
 
             // here is the response place
-            if ( ( itclients->content + SEND ) >=  message.length() ) {
+            if ( ( itclients->second.content + SEND ) >=  message.length() ) {
 
-                if ( itclients->content == 0 )
+                if ( itclients->second.content == 0 )
                     deff =  message.length();
                 else 
-                    deff = message.length() - itclients->content;
-                sended = send( pfds[i].fd, ( message.c_str() + itclients->content ), deff, 0 );
+                    deff = message.length() - itclients->second.content;
+                sended = send( pfds[i].fd, ( message.c_str() + itclients->second.content ), deff, 0 );
             } else
-                sended = send( pfds[i].fd, ( message.c_str() + itclients->content ), SEND, 0 );
+                sended = send( pfds[i].fd, ( message.c_str() + itclients->second.content ), SEND, 0 );
             if ( sended == -1 ) {
 
                 perror( "send" );
+                this->clients.erase( itclients );
             } else {
 
-                itclients->content += sended;
+                itclients->second.content += sended;
                 // std::cout << itclients->sockfd << " " << itclients->content << " => " << message.length() << std::endl;
-                if ( itclients->content >= message.length() ) {
+                if ( itclients->second.content >= message.length() ) {
 
                     std::cout << "---> sent" << std::endl;
 
                     // remove client
-                    this->removeclient( itclients );
-
+                    this->clients.erase( itclients );
                     // remove pollf
                     this->removepollsock( i );
 
