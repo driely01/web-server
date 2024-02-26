@@ -95,6 +95,8 @@ class Server {
         //request
         void	parseRequest( char *recievebuff );
 
-        //mime type
-        // void Server::setMimeType(std::string& mimetype);
+
 };
+
+//mime type
+std::string getMimeType(const std::string& extension);

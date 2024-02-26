@@ -16,5 +16,4 @@ void	Server::parseRequest( char *recievebuff ) {
 	if (method == "GET") {
 		response(path);
 	}
-
 }

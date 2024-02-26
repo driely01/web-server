@@ -251,13 +251,16 @@ void Server::pollMainWork( void ) {
 std::string Server::response( std::string path ) {
 
     std::string statusLine;
-    if (path != "/" && access(path.c_str(), F_OK) == -1) {
+    if (access(path.c_str(), F_OK) == -1 && path != "") {
         statusLine = "HTTP/1.1 404 Not Found";
     }
-    else if (path != "/"){
+    else {
+        if (path == "")
+            path = "index.html";
     std::cout << "path:" << path << std::endl;
+        
         file.open( path, std::ios::in );
-        if ( !file ) {
+        if ( !file.is_open() ) {
 
             std::cout << "failed to open file" << std::endl;
             exit( EXIT_FAILURE );
@@ -268,8 +271,13 @@ std::string Server::response( std::string path ) {
         }
         statusLine = "HTTP/1.1 200 OK";
     }
-
-    message = statusLine + "\r\nContent-Type: video/mp4\r\nContent-Length: ";
+    std::string type = path.substr(path.rfind('.') + 1);
+    std::cout << "type:" << type << std::endl;
+    std::string mimeType = getMimeType(type);
+    //test
+    std::cout << "mimetype: " << mimeType << std::endl;
+    //test
+    message = statusLine + "\r\nContent-Type: " + mimeType + "\r\nContent-Length: ";
     message.append( std::to_string( tmp.size() ) ).append( "\r\n\r\n" ).append( tmp );
     std::cout << "message length: " << message.length() << std::endl;
 
@@ -294,7 +302,7 @@ void Server::recieverequest( int const &i ) {
             this->removeclient( itclients );
             this->removepollsock( i );
         }  else {
-
+            recievebuff[recieved] = '\0';
             std::cout << recievebuff << std::endl;
             parseRequest((char *)recievebuff);
             pfds[i].events = POLLOUT;
@@ -302,8 +310,6 @@ void Server::recieverequest( int const &i ) {
         }
     }
 }
-
-
 
 void Server::sendresponse( int const &i ) {
 
