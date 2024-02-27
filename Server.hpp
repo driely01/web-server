@@ -18,6 +18,8 @@
 #include <sys/fcntl.h>
 #include <errno.h>
 
+#include "Colors.hpp"
+
 #define PORT "9034"
 #define BACKLOG 128
 #define SEND 1024

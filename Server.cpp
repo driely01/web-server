@@ -25,9 +25,9 @@ void Server::getInfoAddr( void ) {
     std::memset( &hints, 0, sizeof( hints ) );
     hints.ai_family = AF_INET;
     hints.ai_socktype = SOCK_STREAM;
-    // hints.ai_flags = AI_PASSIVE;
+    hints.ai_flags = AI_PASSIVE;
 
-    this->status = getaddrinfo( "10.11.6.6", PORT, &hints, &ai );
+    this->status = getaddrinfo( "10.11.8.13", PORT, &hints, &ai );
     if ( this->status != 0 ) {
 
         std::cout << "error: getaddrinfo: " << gai_strerror( status ) << std::endl;
@@ -47,7 +47,7 @@ int Server::createsocket( void ) {
         }
         std::cout << "--> socket" << std::endl;
 
-        if ( fcntl( listener, F_SETFD, O_NONBLOCK ) == -1 ) {
+        if ( fcntl( listener, F_SETFL, O_NONBLOCK, FD_CLOEXEC ) == -1 ) {
 
             perror( "fcntl" );
             return -1;
@@ -123,9 +123,10 @@ void Server::addPollClient( int const &sockfd ) {
 // remove poll socket
 void Server::removepollsock( int const &i ) {
 
+    std::cout << pfds[i].fd;
     close( pfds[i].fd );
     this->pfds.erase( pfds.begin() + i );
-    std::cout << "poll removed" << std::endl;
+    std::cout << " poll removed" << std::endl;
 }
 
 // accept connections
@@ -217,6 +218,18 @@ void Server::pollMainWork( void ) {
 
             // send the response to the client
             this->sendresponse( i );
+        } else if ( pfds[i].revents & POLLHUP ) {
+
+            if ( pfds[i].fd != listener ) {
+
+                std::cout << RED << "clients close the connection" << RESET << std::endl;
+                std::map<int, clients_t>::iterator it;
+                it = clients.find( pfds[i].fd );
+                if ( it != clients.end() )
+                    this->clients.erase( it );
+                this->removepollsock( i );
+                std::cout << GREEN << "length of pfds " << pfds.size() << RESET << std::endl;
+            }
         }
     }
 }
@@ -251,7 +264,7 @@ void Server::recieverequest( int const &i ) {
         char recievebuff[SIZE];
         int sender = pfds[i].fd;
         int recieved = recv( pfds[i].fd, recievebuff, SIZE, 0 );
-        recievebuff[recieved] = 0;
+        recievebuff[recieved - 1] = 0;
         if ( recieved <= 0 ) {
 
             if ( recieved == 0 )
@@ -269,8 +282,6 @@ void Server::recieverequest( int const &i ) {
         }
     }
 }
-
-
 
 void Server::sendresponse( int const &i ) {
 
@@ -301,7 +312,7 @@ void Server::sendresponse( int const &i ) {
             } else {
 
                 itclients->second.content += sended;
-                // std::cout << itclients->sockfd << " " << itclients->content << " => " << message.length() << std::endl;
+                // std::cout << itclients->second.sockfd << " " << itclients->second.content << " => " << message.length() << std::endl;
                 if ( itclients->second.content >= message.length() ) {
 
                     std::cout << "---> sent" << std::endl;
@@ -310,6 +321,7 @@ void Server::sendresponse( int const &i ) {
                     this->clients.erase( itclients );
                     // remove pollf
                     this->removepollsock( i );
+                    std::cout << GREEN << "length of pfds " << pfds.size() << RESET << std::endl;
 
                 }
             }
