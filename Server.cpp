@@ -85,7 +85,7 @@ void Server::socketlistener( void ) {
     freeaddrinfo( ai );
     if ( !p ) {
 
-        std::cout << "didn't get bound" << std::endl;
+        std::cerr << "didn't get bound" << std::endl;
         exit( EXIT_FAILURE );
     }
 
@@ -113,7 +113,6 @@ void Server::addServersToPoll( void ) {
 
 // add client poll
 void Server::addPollClient( int const &sockfd ) {
-
     struct pollfd pfd;
 
     pfd.fd = sockfd;
@@ -124,9 +123,8 @@ void Server::addPollClient( int const &sockfd ) {
 // remove poll socket
 void Server::removepollsock( int const &i ) {
 
-    close( pfds[i].fd );
-    this->pfds.erase( pfds.begin() + i );
-    std::cout << "poll removed" << std::endl;
+	close( pfds[i].fd );
+	this->pfds.erase( pfds.begin() + i );
 }
 
 // accept connections
@@ -149,8 +147,8 @@ int Server::acceptConnections( void ) {
         this->addPollClient( newsockfd );
         this->addClient( newsockfd );
         this->printConeectedaddr( newsockfd ); // for debugging
+    	std::cout << "-----> accept: " << newsockfd << std::endl;
     }
-    std::cout << "-----> accept" << std::endl;
     return 0;
 }
 
@@ -162,6 +160,8 @@ void Server::addClient( int const &sockfd ) {
 
     client.sockfd = sockfd;
     client.content = 0;
+	client.contentLength = 0;
+	client.contentResponse = 0;
 
     if ( clients.size() == 0 ) {
 
@@ -219,141 +219,90 @@ void Server::printConeectedaddr( int const &sockfd ) {
 
 void Server::pollMainWork( void ) {
 
-    if ( poll( pfds.data(), pfds.size(), -1 ) == -1 ) {
+	if ( poll( pfds.data(), pfds.size(), -1 ) == -1 ) {
+		perror( "poll" );
+		exit( EXIT_FAILURE );
+	}
 
-        perror( "poll" );
-        exit( EXIT_FAILURE );
-    }
-
-    for ( int i = 0; i < ( int )pfds.size(); i++ ) {
-
-        if ( pfds[i].revents & POLLIN ) {
-
-            if ( pfds[i].fd == listener ) {
-
-                if ( this->acceptConnections() == -1 )
-                    continue;
-            }
-            else {
-
-                // read request and parse... and change the event socket to pollout
-                this->recieverequest( i );
-            }
-        } else if ( pfds[i].revents & POLLOUT ) {
-            // send the response to the client
-            this->sendresponse( i );
-        }
-    }
+	for ( int i = 0; i < ( int )pfds.size(); i++ ) {
+		if ( pfds[i].revents & POLLIN ) {
+			if ( pfds[i].fd == listener ) {
+				if ( this->acceptConnections() == -1 )
+					continue;
+			}
+			else {
+				// read request and parse... and change the event socket to pollout
+				this->recieverequest( i );
+			}
+		} else if ( pfds[i].revents == POLLOUT ) {
+			// send the response to the client
+			this->sendresponse( i );
+		}
+	}
 }
 
 // ---------------------------- test ---------------------------- //
-void Server::response( std::string path, int const &i ) {
-    std::ifstream file;
-    std::string buffer;
-    std::string tmp;
-    std::string statusLine;
-    if (access(path.c_str(), F_OK) == -1 && path != "") {
-        statusLine = "HTTP/1.1 404 Not Found";
-    }
-    else {
-        if (path == "")
-            path = "index.html";
-        
-        file.open( path, std::ios::in );
-        if ( !file.is_open() ) {
 
-            std::cout << "failed to open file" << std::endl;
-            exit( EXIT_FAILURE );
-        }
-        while ( getline( file, buffer ) ) {
+void Server::response( std::string path, std::vector<clients_t>::iterator& itclient ) {
+	char buffer[SEND];
 
-            tmp.append( buffer ).append( "\n" );
-        }
-        statusLine = "HTTP/1.1 200 OK";
-    }
-    std::string type = path.substr(path.rfind('.') + 1);
-    std::string mimeType = getMimeType(type);
-    std::vector<clients_t>::iterator itclients;
-    itclients = this->findActiveClient( i );
-    if ( itclients != clients.end() ) {
-        itclients->message = statusLine + "\r\nContent-Type: " + mimeType + "\r\nContent-Length: ";
-        itclients->message.append( std::to_string( tmp.size() ) ).append( "\r\n\r\n" ).append( tmp );
-        //////---------display request info---------///////
-        std::cout << "path: " << path << std::endl;
-        std::cout << "type: " << type << std::endl;
-        std::cout << "mimetype: " << mimeType << std::endl;
-        std::cout << "message length: " << itclients->message.length() << std::endl;
-        // std::cout << "message : " << message << std::endl;
-    }
+	std::string type = path.substr(path.rfind('.') + 1);
+	std::string mimeType = getMimeType(type);
+	if (itclient->contentResponse == 0) {
+		itclient->message = itclient->statusLine + "\r\nContent-Type: " + mimeType + "\r\nContent-Length: ";
+		itclient->message.append( std::to_string( itclient->contentLength ) ).append( "\r\n\r\n" );
+		itclient->contentLength += itclient->message.length();
+		itclient->contentResponse += itclient->message.length();
+		// std::cout << "message : " << itclient->message << std::endl;
+	}
+	else
+	{
+		size_t bytesRead = read(itclient->file, buffer, SEND);
+		if (bytesRead < SEND)
+			buffer[bytesRead] = '\0';
+		itclient->contentResponse += bytesRead;
+		itclient->message = std::string(buffer, bytesRead);
+	}
+	//////---------display request info---------///////
+	// std::cout << "path: " << path << std::endl;
+	// std::cout << "type: " << type << std::endl;
+	// std::cout << "mimetype: " << mimeType << std::endl;
 }
-
-void Server::recieverequest( int const &i ) {
-
-    std::vector<clients_t>::iterator itclients;
-    itclients = this->findActiveClient( i );
-    if ( itclients != clients.end() ) {
-
-        char recievebuff[SIZE];
-        int sender = pfds[i].fd;
-        int recieved = recv( pfds[i].fd, recievebuff, SIZE, 0 );
-        if ( recieved <= 0 ) {
-
-            if ( recieved == 0 )
-                std::cout << "*-*> pollserver: socket " << sender << " hung up" << std::endl;
-            else
-                perror( "recv" );
-            this->removeclient( itclients );
-            this->removepollsock( i );
-        }  else {
-            recievebuff[recieved] = '\0';
-            std::cout << recievebuff << std::endl;
-            parseRequest((char *)recievebuff, i);
-            pfds[i].events = POLLOUT;
-            std::cout << pfds[i].fd << " " << itclients->sockfd << " " << "----> pullout" << std::endl;
-        }
-    }
-}
-
 void Server::sendresponse( int const &i ) {
 
-    int deff;
-    ssize_t sended;
-    std::vector<struct pollfd>::iterator itpfds;
-    std::vector<clients_t>::iterator itclients;
+	ssize_t sended;
+	std::vector<clients_t>::iterator itclients;
 
-    if ( pfds[i].fd != listener ) {
+	if ( pfds[i].fd != listener ) {
+		itclients = this->findActiveClient( i );
+		if ( itclients != clients.end() ) {
 
-        itclients = this->findActiveClient( i );
-        if ( itclients != clients.end() ) {
+			// method
+			if (itclients->method == "GET") {
+				response(itclients->path, itclients);
+			}
 
-            // here is the response place
-            if ( ( itclients->content + SEND ) >=  itclients->message.length() ) {
+			// send header response
+			if ( itclients->message.length() < SEND ) {
+				sended = send( pfds[i].fd, ( itclients->message.c_str() ), itclients->message.length(), 0 );
+			}
+			else { //send content
+				sended = send( pfds[i].fd, ( itclients->message.c_str() ), SEND, 0 );
+			} 
+			if ( sended == -1 ) {
+				std::cerr << "failed to send" << std::endl;
+			} else {
+				if ( itclients->contentResponse == itclients->contentLength ) {
+					// std::cout << "content Response: " << itclients->contentResponse << std::endl;
+					std::cout << "---> sent: " << pfds[i].fd << std::endl;
 
-                if ( itclients->content == 0 )
-                    deff =  itclients->message.length();
-                else 
-                    deff = itclients->message.length() - itclients->content;
-                sended = send( pfds[i].fd, ( itclients->message.c_str() + itclients->content ), deff, 0 );
-            } else
-    		    sended = send( pfds[i].fd, ( itclients->message.c_str() + itclients->content ), SEND, 0 );
-            if ( sended == -1 ) {
-                perror( "send" );
-            } else {
+					// remove client
+					this->removeclient( itclients );
 
-                itclients->content += sended;
-                // std::cout << itclients->sockfd << " " << itclients->content << " => " << itclients->message.length() << std::endl;
-                if ( itclients->content == itclients->message.length() ) {
-
-                    std::cout << "---> sent" << std::endl;
-
-                    // remove client
-                    this->removeclient( itclients );
-
-                    // remove pollf
-                    this->removepollsock( i );
-
-                }
-            }
-        }
-    }
+					// remove pollf
+					this->removepollsock( i );
+				}
+			}
+		}
+	}
 }

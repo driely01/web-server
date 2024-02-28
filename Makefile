@@ -1,6 +1,6 @@
 C = c++
 flag = -Wall -Wextra -Werror -std=c++98
-src = main.cpp mimeType.cpp request.cpp Server.cpp
+src = main.cpp mimeType.cpp request.cpp Server.cpp tools.cpp
 obj = $(src:.cpp=.o)
 header = Server.hpp
 Name = a.out
