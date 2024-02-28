@@ -1,6 +1,6 @@
 #include "Server.hpp"
 
-void	Server::parseRequest( char *recievebuff ) {
+void	Server::parseRequest( char *recievebuff, int const &i ) {
 	std::string recbuff(recievebuff);
 	std::string requestLine;
 	std::istringstream recbuffStream(recbuff);
@@ -16,6 +16,6 @@ void	Server::parseRequest( char *recievebuff ) {
 	std::getline(methodStream, path, ' ');
 	path.erase(0, 1);
 	if (method == "GET") {
-		response(path);
+		response(path, i);
 	}
 }

@@ -26,6 +26,7 @@ typedef struct clients_s {
 
     int sockfd;
     size_t content;
+    std::string message;
 } clients_t;
 
 class Server {
@@ -46,9 +47,6 @@ class Server {
 
         // clients
         std::vector<clients_t> clients;
-
-        // response
-        std::string message;
 
         // some fuction that we don't need to use outside the class
         int createsocket( void );
@@ -81,12 +79,12 @@ class Server {
         std::vector<clients_t>::iterator findActiveClient( int const &i );
 
         // ---------------------------- test ---------------------------- //
-        std::string response( std::string path );
+        void response( std::string path, int const &i );
         void recieverequest( int const &i );
         void sendresponse( int const &i );
 
         //request
-        void	parseRequest( char *recievebuff );
+        void	parseRequest( char *recievebuff, int const &i );
 
 
 };

@@ -247,7 +247,7 @@ void Server::pollMainWork( void ) {
 }
 
 // ---------------------------- test ---------------------------- //
-std::string Server::response( std::string path ) {
+void Server::response( std::string path, int const &i ) {
     std::ifstream file;
     std::string buffer;
     std::string tmp;
@@ -273,16 +273,18 @@ std::string Server::response( std::string path ) {
     }
     std::string type = path.substr(path.rfind('.') + 1);
     std::string mimeType = getMimeType(type);
-    message = statusLine + "\r\nContent-Type: " + mimeType + "\r\nContent-Length: ";
-    message.append( std::to_string( tmp.size() ) ).append( "\r\n\r\n" ).append( tmp );
-    //////---------display request info---------///////
-    std::cout << "path: " << path << std::endl;
-    std::cout << "type: " << type << std::endl;
-    std::cout << "mimetype: " << mimeType << std::endl;
-    std::cout << "message length: " << message.length() << std::endl;
-    // std::cout << "message : " << message << std::endl;
-
-    return message;
+    std::vector<clients_t>::iterator itclients;
+    itclients = this->findActiveClient( i );
+    if ( itclients != clients.end() ) {
+        itclients->message = statusLine + "\r\nContent-Type: " + mimeType + "\r\nContent-Length: ";
+        itclients->message.append( std::to_string( tmp.size() ) ).append( "\r\n\r\n" ).append( tmp );
+        //////---------display request info---------///////
+        std::cout << "path: " << path << std::endl;
+        std::cout << "type: " << type << std::endl;
+        std::cout << "mimetype: " << mimeType << std::endl;
+        std::cout << "message length: " << itclients->message.length() << std::endl;
+        // std::cout << "message : " << message << std::endl;
+    }
 }
 
 void Server::recieverequest( int const &i ) {
@@ -305,7 +307,7 @@ void Server::recieverequest( int const &i ) {
         }  else {
             recievebuff[recieved] = '\0';
             std::cout << recievebuff << std::endl;
-            parseRequest((char *)recievebuff);
+            parseRequest((char *)recievebuff, i);
             pfds[i].events = POLLOUT;
             std::cout << pfds[i].fd << " " << itclients->sockfd << " " << "----> pullout" << std::endl;
         }
@@ -325,23 +327,22 @@ void Server::sendresponse( int const &i ) {
         if ( itclients != clients.end() ) {
 
             // here is the response place
-            if ( ( itclients->content + SEND ) >=  message.length() ) {
+            if ( ( itclients->content + SEND ) >=  itclients->message.length() ) {
 
                 if ( itclients->content == 0 )
-                    deff =  message.length();
+                    deff =  itclients->message.length();
                 else 
-                    deff = message.length() - itclients->content;
-                sended = send( pfds[i].fd, ( message.c_str() + itclients->content ), deff, 0 );
+                    deff = itclients->message.length() - itclients->content;
+                sended = send( pfds[i].fd, ( itclients->message.c_str() + itclients->content ), deff, 0 );
             } else
-                sended = send( pfds[i].fd, ( message.c_str() + itclients->content ), SEND, 0 );
+    		    sended = send( pfds[i].fd, ( itclients->message.c_str() + itclients->content ), SEND, 0 );
             if ( sended == -1 ) {
-
                 perror( "send" );
             } else {
 
                 itclients->content += sended;
-                // std::cout << itclients->sockfd << " " << itclients->content << " => " << message.length() << std::endl;
-                if ( itclients->content >= message.length() ) {
+                // std::cout << itclients->sockfd << " " << itclients->content << " => " << itclients->message.length() << std::endl;
+                if ( itclients->content == itclients->message.length() ) {
 
                     std::cout << "---> sent" << std::endl;
 
