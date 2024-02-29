@@ -10,3 +10,16 @@ size_t get_size_fd(int fd) {
 	}
 	return (fileStat.st_size);
 }
+
+int stringToInt(const std::string& str) {
+	std::istringstream iss(str);
+	int result;
+	iss >> result;
+	return result;
+}
+
+std::string intToString(size_t num) {
+	std::ostringstream oss;
+	oss << num;
+	return oss.str();
+}

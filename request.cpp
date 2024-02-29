@@ -18,7 +18,7 @@ void Server::recieverequest( int const &i ) {
 		this->removepollsock( i );
 		} else {
 			recievebuff[recieved] = '\0';
-			std::cout << "request: " << recievebuff << std::endl;
+			std::cout << recievebuff << std::endl;
 			parseRequest((char *)recievebuff, itclients);
 			pfds[i].events = POLLOUT;
 			std::cout << pfds[i].fd << " " << itclients->sockfd << " " << "----> pullout" << std::endl;
@@ -40,6 +40,7 @@ void	Server::parseRequest( char *recievebuff, std::vector<clients_t>::iterator& 
 	std::getline(methodStream, itclients->path, ' ');
 	itclients->path.erase(0, 1);
 
+	// open file and set status line for response
 	if (access(itclients->path.c_str(), F_OK) == -1 && itclients->path != "") {
 		itclients->statusLine = "HTTP/1.1 404 Not Found";
 	}
@@ -53,5 +54,18 @@ void	Server::parseRequest( char *recievebuff, std::vector<clients_t>::iterator& 
 		}
 		itclients->statusLine = "HTTP/1.1 200 OK";
 		itclients->contentLength = get_size_fd(itclients->file);
+	}
+
+	//get Range
+	std::string range;
+	while (std::getline(recbuffStream, range)) {
+		if (range.substr(0, 13) == "Range: bytes=") {
+			int numS = range.find('-') - (range.find('=') + 1);
+			itclients->rangeStart = range.substr(range.find('=') + 1, numS);
+			std::cout << "start: " << itclients->rangeStart << std::endl;
+			itclients->rangeEnd = intToString(itclients->contentLength);
+			std::cout << "end: " << itclients->rangeEnd << std::endl;
+			break;
+		}
 	}
 }

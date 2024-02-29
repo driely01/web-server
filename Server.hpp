@@ -35,6 +35,8 @@ typedef struct clients_s {
 	std::string path;
 	std::string message;
 	std::string statusLine;
+	std::string rangeStart;
+	std::string rangeEnd;
 } clients_t;
 
 class Server {
@@ -95,3 +97,5 @@ class Server {
 
 std::string	getMimeType(const std::string& extension);
 size_t		get_size_fd(int fd);
+int			stringToInt(const std::string& str);
+std::string	intToString(size_t num);
