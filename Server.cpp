@@ -162,6 +162,10 @@ void Server::addClient( int const &sockfd ) {
     client.content = 0;
 	client.contentLength = 0;
 	client.contentResponse = 0;
+    client.countBytesRead = 0;
+    client.sentHeader = false;
+    client.notFound = false;
+    client.file = -2;
 
     if ( clients.size() == 0 ) {
 
@@ -225,7 +229,7 @@ void Server::pollMainWork( void ) {
 	}
 
 	for ( int i = 0; i < ( int )pfds.size(); i++ ) {
-		if ( pfds[i].revents & POLLIN ) {
+		if ( pfds[i].revents == POLLIN ) {
 			if ( pfds[i].fd == listener ) {
 				if ( this->acceptConnections() == -1 )
 					continue;
@@ -234,7 +238,8 @@ void Server::pollMainWork( void ) {
 				// read request and parse... and change the event socket to pollout
 				this->recieverequest( i );
 			}
-		} else if ( pfds[i].revents == POLLOUT ) {
+		}
+		else if ( pfds[i].revents == POLLOUT ) {
 			// send the response to the client
 			this->sendresponse( i );
 		}

@@ -30,11 +30,17 @@ typedef struct clients_s {
 	size_t content;
 	size_t contentResponse;
 	size_t contentLength;
+	size_t rangeStartNum;
+	size_t rangeEndNum;
+	size_t countBytesRead;
 	int file;
+	bool notFound;
+	bool sentHeader;
 	std::string method;
 	std::string path;
 	std::string message;
 	std::string statusLine;
+	std::string headerResponse;
 	std::string rangeStart;
 	std::string rangeEnd;
 } clients_t;
@@ -86,16 +92,17 @@ class Server {
 		void removeclient( std::vector<clients_t>::iterator const &it );
 		std::vector<clients_t>::iterator findActiveClient( int const &i );
 
-		// ---------------------------- test ---------------------------- //
-		void	response( std::string path, std::vector<clients_t>::iterator& itclient );
-		void	recieverequest( int const &i );
+		// response
 		void	sendresponse( int const &i );
+		void	sendHeader( std::vector<clients_t>::iterator& itclient, int const &i );
+		void	sendBody( std::vector<clients_t>::iterator& itclient, int const &i );
 
 		//request
 		void	parseRequest( char *recievebuff, std::vector<clients_t>::iterator& itclients );
+		void	recieverequest( int const &i );
 };
 
 std::string	getMimeType(const std::string& extension);
-size_t		get_size_fd(int fd);
-int			stringToInt(const std::string& str);
+size_t 		get_size_fd(std::string fileD);
+size_t		stringToInt(const std::string& str);
 std::string	intToString(size_t num);

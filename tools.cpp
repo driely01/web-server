@@ -1,19 +1,17 @@
 #include "Server.hpp"
 
-size_t get_size_fd(int fd) {
+size_t get_size_fd(std::string fileD) {
 	struct stat fileStat;
 
-	if (fstat(fd, &fileStat) == -1) {
-		std::cerr << "Failed to get file status." << std::endl;
-		close(fd);
-		exit( EXIT_FAILURE );
+	if (lstat(fileD.c_str(), &fileStat) == -1) {
+		return (-1);
 	}
 	return (fileStat.st_size);
 }
 
-int stringToInt(const std::string& str) {
+size_t stringToInt(const std::string& str) {
 	std::istringstream iss(str);
-	int result;
+	size_t result;
 	iss >> result;
 	return result;
 }
