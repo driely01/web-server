@@ -3,12 +3,13 @@ server {
 	server_name test1;
 	listen	localhost:8080;
 	client_max_body_size	20000M;
-	root	/Users/mmisskin/goinfre/server;
+	root	/Users/del-yaag/Desktop/web-server/cgiScript/;
 	upload_store /tmp;
 
 	location / {
 		cgi_pass .sh /bin/bash;
 		cgi_pass .cgi;
+		cgi_pass .out;
 	}
 
 	location /flexbox {

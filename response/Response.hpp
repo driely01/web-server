@@ -6,7 +6,7 @@
 /*   By: del-yaag <del-yaag@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/05 15:54:22 by del-yaag          #+#    #+#             */
-/*   Updated: 2024/03/31 09:03:43 by del-yaag         ###   ########.fr       */
+/*   Updated: 2024/03/31 13:01:24 by del-yaag         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -107,7 +107,6 @@ class Response {
         void parsePostBodyHeader( std::string const &chunck );
         int parseEncodingBody( Request const &request, Conf::Server const &server);
         int parseBoundariesBody( Request const &request, Conf::Server const &server);
-        int parseLengthBody( void );
         std::string getHeaderValue( std::string const &chunck, std::string const &findStr, std::string const &delim );
         int createFileAndWrite( std::string const &str, Request const &request, Conf::Server const &server, bool const flag );
         int execPostMethod( Request &request, Conf::Server const &server );

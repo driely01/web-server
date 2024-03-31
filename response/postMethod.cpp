@@ -6,7 +6,7 @@
 /*   By: del-yaag <del-yaag@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/28 01:06:39 by del-yaag          #+#    #+#             */
-/*   Updated: 2024/03/31 11:10:32 by del-yaag         ###   ########.fr       */
+/*   Updated: 2024/03/31 13:01:48 by del-yaag         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -113,7 +113,7 @@ int  Response::createFileAndWrite( std::string const &str, Request const &reques
             bytes = write( this->fd, str.c_str(), str.size() );
             if ( bytes == -1 ) {
 
-                std::cout << RED << "\tERROR: open: cannot open " << path << RESET << std::endl;
+                std::cerr << RED << "\tERROR: open: cannot open " << path << RESET << std::endl;
                 close( this->fd );
                 this->setStatusCode( 500 );
                 return 0;
@@ -328,11 +328,8 @@ int Response::generateSessionId( std::string &login, std::string &password, bool
             passFlag = true;
             password = stringToAscii( chunked );
         }
-        if ( loginFlag && passFlag ) {
-            
+        if ( loginFlag && passFlag )
             this->sessionId = login + password;
-            // std::cout << GREEN << "session ID = " << this->sessionId << RESET << std::endl << std::endl;
-        }
     } else {
         return 0; // error
     }
@@ -349,6 +346,7 @@ int Response::parseSessionsBody( Request &request ) {
     bool loginFlag = false;
     bool passFlag = false;
 
+    this->cgiBody = this->body;
     while ( !this->body.empty() ) {
         
         find = this->body.find( "\r\n" );
@@ -548,12 +546,6 @@ int Response::parseEncodingBody( Request const &request, Conf::Server const &ser
     return 1;
 }
 
-int  Response::parseLengthBody( void ) {
-
-    std::cout << "length" <<  std::endl;
-    return 1;
-}
-
 int Response::execPostMethod( Request &request, Conf::Server const &server ) {
 
     int status;
@@ -572,7 +564,7 @@ int Response::execPostMethod( Request &request, Conf::Server const &server ) {
         } else if ( request.getBodyType() == BOUNDARIES || request.getBodyType() == LENGTH ) {
             
             this->parseSessionsBody( request );
-            if ( !this->openCgiFile( request.getCgi().getCgiInFile(), this->body ) ) // open file and put the body inside it
+            if ( !this->openCgiFile( request.getCgi().getCgiInFile(), this->cgiBody ) ) // open file and put the body inside it
                 return 1; //error
             // cgi work here
 			request.getCgi().setReady(true);

@@ -6,7 +6,7 @@
 /*   By: del-yaag <del-yaag@student.42.fr>          +#+  +:+       +#+        */
 /*                                                +#+#+#+#+#+   +#+           */
 /*   Created: 2024/03/31 03:10:41 by del-yaag          #+#    #+#             */
-/*   Updated: 2024/03/31 06:38:44 by del-yaag         ###   ########.fr       */
+/*   Updated: 2024/03/31 12:32:19 by del-yaag         ###   ########.fr       */
 /*                                                                            */
 /* ************************************************************************** */
 
@@ -69,14 +69,14 @@ void ParseData::setEndBoundary( std::string const &boundary ) {
     this->endBoundary = boundary;
 }
 
-void ParseData::getStartEndBoundaries( std::string const &body ) {
+void ParseData::getStartEndBoundaries( void ) {
 
     size_t find;
 
-    find = body.find( "\r\n" );
+    find = this->body.find( "\r\n" );
     if ( find != std::string::npos ) {
 
-        this->startBoundary = body.substr( 0, find );
+        this->startBoundary = this->body.substr( 0, find );
         this->endBoundary = this->getStartBoundary().append( "--" );
     }
 }
@@ -154,9 +154,6 @@ int ParseData::parseLogin( void ) {
     std::string chunked;
     size_t find;
 
-    if ( ( this->name == "login" && this->islogin ) || ( this->name == "password" && this->ispassword ) )
-        return 0; // error
-
     if ( ( this->name == "login" && !this->islogin ) || ( this->name == "password" && !this->ispassword ) ) {
         
         find = this->body.find( "\r\n" );
@@ -172,7 +169,7 @@ int ParseData::parseLogin( void ) {
             else if ( this->name == "password" ) {
                 
                 this->ispassword = true;
-                this->password =  chunked ;
+                this->password =  chunked;
             }
         }
     } else
